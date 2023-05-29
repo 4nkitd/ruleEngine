@@ -1,6 +1,8 @@
 package engine
 
-import "sort"
+import (
+	"sort"
+)
 
 type Rules struct {
 	Name       string      `json:"name"`
@@ -14,8 +16,8 @@ type Decision struct {
 }
 
 type Event struct {
-	Type   string  `json:"type"`
-	Params Options `json:"params"`
+	Type   string    `json:"type"`
+	Params []Options `json:"params"`
 }
 
 type Options struct {
@@ -45,8 +47,51 @@ func (c *Rules) RunDecisions() ([]Event, error) {
 
 	// Calculate scores for each decision
 	scores := make(map[int]int)
+	anyScores := make(map[int]int)
+
+	hasAny := false
+
 	for i, d := range c.Decisions {
 		scores[i] = len(d.Conditions.AllOf)
+		anyScores[i] = len(d.Conditions.OneOf)
+
+		if len(d.Conditions.OneOf) > 0 {
+			hasAny = true
+		}
+
+	}
+
+	// If there are no decisions with any conditions, return the first decision
+	if !hasAny {
+
+		for _, d := range c.Decisions {
+
+			for _, condition := range d.Conditions.AllOf {
+
+				processThis := false
+
+				for _, attribute := range c.Attributes {
+					if attribute.Variable == condition.Variable {
+						if attribute.Value == condition.Value {
+							if evaluateCondition(attribute.Value, condition.Value, condition.Operator) {
+								processThis = true
+							}
+						}
+					}
+				}
+
+				if processThis {
+					results = append(results, d.Event)
+					break
+				}
+			}
+		}
+
+		return results, nil
+	}
+
+	if len(c.Decisions) == 0 {
+		return results, nil
 	}
 
 	// Sort the decision indexes based on scores in descending order
@@ -78,6 +123,7 @@ func (c *Rules) RunDecisions() ([]Event, error) {
 
 		if matchedConditions == totalConditions {
 			results = append(results, d.Event)
+			break
 		}
 	}
 

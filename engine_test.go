@@ -2,6 +2,7 @@ package engine
 
 import (
 	"encoding/json"
+	"fmt"
 	"testing"
 )
 
@@ -12,13 +13,49 @@ var data = `
         {
             "event": {
                 "type": "apply discount",
-                "params": {
+                "params": [{
                     "variable": "discountCode",
                     "value": "winter50"
-                }
+                },
+                {
+                    "variable": "blame",
+                    "value": "summer"
+                }]
             },
             "conditions": {
                 "all": [
+                    {
+                        "variable": "amount",
+                        "value": "200",
+                        "operator": "equal"
+                    },
+                    {
+                        "variable": "category",
+                        "value": "food",
+                        "operator": "equal"
+                    },
+                    {
+                        "variable": "discountCode",
+                        "value": "winter50",
+                        "operator": "equal"
+                    }
+                ]
+            }
+        },
+        {
+            "event": {
+                "type": "apply fee",
+                "params": [{
+                    "variable": "feeCode",
+                    "value": "free"
+                },
+                {
+                    "variable": "blame",
+                    "value": "free"
+                }]
+            },
+            "conditions": {
+                "any": [
                     {
                         "variable": "amount",
                         "value": "200",
@@ -118,7 +155,7 @@ func TestRun(t *testing.T) {
 	}
 
 	jsonResp, _ := json.Marshal(resp)
-
+	fmt.Println(string(jsonResp))
 	t.Log(jsonResp)
 
 }

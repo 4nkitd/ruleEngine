@@ -33,6 +33,9 @@ func ValidateRuleAttributesAndConditions(rules Rules) error {
 	}
 
 	for _, decision := range rules.Decisions {
+		if len(decision.Conditions.AllOf) > 0 && len(decision.Conditions.OneOf) > 0 {
+			return errors.New("decision cannot have both all and any condition sets")
+		}
 		for _, condition := range decision.Conditions.AllOf {
 			if !supportedOperators[strings.ToLower(condition.Operator)] {
 				return errors.New("unsupported condition operator: " + condition.Operator)
