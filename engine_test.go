@@ -9,6 +9,7 @@ import (
 var data = `
 {
     "name": "discount",
+    "limit": 1,
     "decisions": [
         {
             "event": {

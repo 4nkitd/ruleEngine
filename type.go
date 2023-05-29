@@ -6,6 +6,7 @@ import (
 
 type Rules struct {
 	Name       string      `json:"name"`
+	Limit      int         `json:"limit"`
 	Decisions  []Decision  `json:"decisions"`
 	Attributes []Attribute `json:"attributes"`
 }
@@ -45,6 +46,13 @@ type Attribute struct {
 func (c *Rules) RunDecisions() ([]Event, error) {
 	results := []Event{}
 
+	limit := c.Limit
+	eventsCaptured := 0
+
+	if limit == 0 {
+		limit = len(c.Decisions)
+	}
+
 	// Calculate scores for each decision
 	scores := make(map[int]int)
 	anyScores := make(map[int]int)
@@ -65,26 +73,33 @@ func (c *Rules) RunDecisions() ([]Event, error) {
 	if !hasAny {
 
 		for _, d := range c.Decisions {
+			processThis := false
 
-			for _, condition := range d.Conditions.AllOf {
+			if eventsCaptured >= limit {
+				break
+			}
 
-				processThis := false
+			for _, condition := range d.Conditions.OneOf {
 
 				for _, attribute := range c.Attributes {
 					if attribute.Variable == condition.Variable {
 						if attribute.Value == condition.Value {
 							if evaluateCondition(attribute.Value, condition.Value, condition.Operator) {
 								processThis = true
+								// skip this loop
+								break
 							}
 						}
 					}
 				}
 
-				if processThis {
-					results = append(results, d.Event)
-					break
-				}
 			}
+			if processThis {
+				results = append(results, d.Event)
+			}
+
+			eventsCaptured++
+
 		}
 
 		return results, nil
@@ -93,7 +108,7 @@ func (c *Rules) RunDecisions() ([]Event, error) {
 	if len(c.Decisions) == 0 {
 		return results, nil
 	}
-
+	eventsCaptured = 0
 	// Sort the decision indexes based on scores in descending order
 	sortedIndexes := make([]int, 0, len(scores))
 	for i := range scores {
@@ -108,7 +123,9 @@ func (c *Rules) RunDecisions() ([]Event, error) {
 		d := c.Decisions[index]
 		totalConditions := len(d.Conditions.AllOf)
 		matchedConditions := 0
-
+		if eventsCaptured >= limit {
+			break
+		}
 		for _, condition := range d.Conditions.AllOf {
 			for _, attribute := range c.Attributes {
 				if attribute.Variable == condition.Variable {
@@ -123,8 +140,8 @@ func (c *Rules) RunDecisions() ([]Event, error) {
 
 		if matchedConditions == totalConditions {
 			results = append(results, d.Event)
-			break
 		}
+		eventsCaptured++
 	}
 
 	return results, nil
